@@ -671,7 +671,7 @@ int main(int argc, char **argv)
 				memcpy(override_atr, card->atr, override_atr_len);
 
 				// ISO 7816-3: ATR[1] is T0. Bit 5 (0x10) indicates if TA1 is present.
-				if (override_atr_len > 2 && (override_atr[1] & 0x10)) {
+				if (override_atr[1] & 0x10) {
 					printf("PCSC: Downgrading ATR speed (TA1) from 0x%02X to 0x11\n", override_atr[2]);
 
 					// Force TA1 to 0x11 (Fi=372, Di=1 -> 9600 baud at 3.57MHz)

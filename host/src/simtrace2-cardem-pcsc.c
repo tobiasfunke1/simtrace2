@@ -672,7 +672,7 @@ int main(int argc, char **argv)
 
 				// ISO 7816-3: ATR[1] is T0. Bit 5 (0x10) indicates if TA1 is present.
 				if (override_atr_len > 2 && (override_atr[1] & 0x10)) {
-					printf("PCSC: Downgrading ATR speed (TA1) from %02X to 0x11\n", override_atr[2]);
+					printf("PCSC: Downgrading ATR speed (TA1) from 0x%02X to 0x11\n", override_atr[2]);
 
 					// Force TA1 to 0x11 (Fi=372, Di=1 -> 9600 baud at 3.57MHz)
 					override_atr[2] = 0x11;
@@ -683,7 +683,7 @@ int main(int argc, char **argv)
 				// update checksum and set ATR
 				atr_update_csum(override_atr, override_atr_len);
 				osmo_st2_cardem_request_set_atr(ci, override_atr, override_atr_len);
-			}else {
+			} else {
 				/* use the real ATR of the card */
 				osmo_st2_cardem_request_set_atr(ci, card->atr, card->atr_len);
 			}

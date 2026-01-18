@@ -205,6 +205,19 @@ static int process_do_rx_da(struct osmo_st2_cardem_inst *ci, uint8_t *buf, int l
 		msgb_apdu_sw(tmsg) = msgb_get_u16(tmsg);
 		ac.sw[0] = msgb_apdu_sw(tmsg) >> 8;
 		ac.sw[1] = msgb_apdu_sw(tmsg) & 0xff;
+
+		/* Patch: if this APDU was TERMINAL PROFILE and the card replied 0x91xx,
+		 * override to 0x9000 so the modem is told "OK" instead of "91 xx".
+		 */
+		if (ac.hdr.ins == 0x10 && ac.sw[0] == 0x91) {
+			LOGCI(ci, LOGL_NOTICE, "Overriding card SW 0x91%02x -> 0x9000 for TERMINAL PROFILE\n", ac.sw[1]);
+			ac.sw[0] = 0x90;
+			ac.sw[1] = 0x00;
+
+			/* Update msgb_apdu_sw(tmsg) if other code relies on it */
+			msgb_apdu_sw(tmsg) = (ac.sw[0] << 8) | ac.sw[1];
+		}
+
 		if (msgb_l3len(tmsg))
 			osmo_st2_cardem_request_pb_and_tx(ci, ac.hdr.ins, tmsg->l3h, msgb_l3len(tmsg));
 		osmo_st2_cardem_request_sw_tx(ci, ac.sw);

@@ -672,10 +672,10 @@ int main(int argc, char **argv)
 
 				// ISO 7816-3: ATR[1] is T0. Bit 5 (0x10) indicates if TA1 is present.
 				if (override_atr[1] & 0x10) {
-					printf("PCSC: Downgrading ATR speed (TA1) from 0x%02X to 0x11\n", override_atr[2]);
+					printf("PCSC: Downgrading ATR speed (TA1) from 0x%02X to 0x01\n", override_atr[2]);
 
-					// Force TA1 to 0x11 (Fi=372, Di=1 -> 9600 baud at 3.57MHz)
-					override_atr[2] = 0x11;
+					// Force TA1 to 0x01 (Fi=372, Di=1, 372 cycles/ETU (10752 bits/s at 4.00 MHz, 10752 bits/s for fMax=4 MHz)
+					override_atr[2] = 0x01;
 				} else {
 					printf("PCSC: Warning - TA1 not present in ATR, cannot downgrade speed.\n");
 				}

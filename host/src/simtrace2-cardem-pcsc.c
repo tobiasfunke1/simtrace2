@@ -403,6 +403,7 @@ static void print_help(void)
 	printf( "\t-h\t--help\n"
 		"\t-i\t--gsmtap-ip\tA.B.C.D\n"
 		"\t-a\t--skip-atr\n"
+		"\t-s\t--low-speed-atr\n"
 		"\t-t\t--set-atr\tATR-STRING in HEX\n"
 		"\t-k\t--keep-running\n"
 		"\t-n\t--pcsc-reader-num\n"
@@ -421,6 +422,7 @@ static void print_help(void)
 static const struct option opts[] = {
 	{ "gsmtap-ip", 1, 0, 'i' },
 	{ "skip-atr", 0, 0, 'a' },
+	{ "low-speed-atr", 0, 0, 's' },
 	{ "set-atr", 1, 0, 't' },
 	{ "help", 0, 0, 'h' },
 	{ "keep-running", 0, 0, 'k' },
@@ -479,6 +481,7 @@ int main(int argc, char **argv)
 	int rc;
 	int c, ret = 1;
 	int skip_atr = 0;
+	int low_speed_atr = 0;
 	char *atr = NULL;
 	uint8_t override_atr[OSIM_MAX_ATR_LEN];
 	int override_atr_len = 0;
@@ -512,7 +515,7 @@ int main(int argc, char **argv)
 	while (1) {
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "hi:V:P:C:I:S:A:H:akn:t:Z:", opts, &option_index);
+		c = getopt_long(argc, argv, "hi:V:P:C:I:S:A:H:askn:t:Z:", opts, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -525,6 +528,9 @@ int main(int argc, char **argv)
 			break;
 		case 'a':
 			skip_atr = 1;
+			break;
+		case 's':
+			low_speed_atr = 1;
 			break;
 		case 't':
 		        atr = optarg;
@@ -657,7 +663,27 @@ int main(int argc, char **argv)
 				/* user has specified an override-ATR */
 				atr_update_csum(override_atr, override_atr_len);
 				osmo_st2_cardem_request_set_atr(ci, override_atr, override_atr_len);
-			} else {
+			} else if (low_speed_atr) {
+				/* use a low-speed ATR */
+
+				// copy original ATR
+				override_atr_len = card->atr_len;
+				memcpy(override_atr, card->atr, override_atr_len);
+
+				// ISO 7816-3: ATR[1] is T0. Bit 5 (0x10) indicates if TA1 is present.
+				if (override_atr_len > 2 && (override_atr[1] & 0x10)) {
+					printf("PCSC: Downgrading ATR speed (TA1) from %02X to 0x11\n", override_atr[2]);
+
+					// Force TA1 to 0x11 (Fi=372, Di=1 -> 9600 baud at 3.57MHz)
+					override_atr[2] = 0x11;
+				} else {
+					printf("PCSC: Warning - TA1 not present in ATR, cannot downgrade speed.\n");
+				}
+
+				// update checksum and set ATR
+				atr_update_csum(override_atr, override_atr_len);
+				osmo_st2_cardem_request_set_atr(ci, override_atr, override_atr_len);
+			}else {
 				/* use the real ATR of the card */
 				osmo_st2_cardem_request_set_atr(ci, card->atr, card->atr_len);
 			}
